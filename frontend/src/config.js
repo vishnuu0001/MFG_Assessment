@@ -8,7 +8,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const API_BASE_URL = isDevelopment 
   ? '' // Use relative URLs in development (proxied by CRA to backend)
-  : (import.meta.env.VITE_API_URL || 'https://mahindra-backend.vercel.app');
+  : (import.meta.env.VITE_API_URL || 'https://mfg-assessmentapi.vercel.app');
 
 // Helper function for making API calls - handles trailing/leading slashes automatically
 export const apiUrl = (path) => {
