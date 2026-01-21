@@ -51,12 +51,15 @@ class MaturityLevel(Base):
     __tablename__ = "maturity_levels"
     
     id = Column(Integer, primary_key=True, index=True)
+    dimension_id = Column(Integer, ForeignKey("dimensions.id"), nullable=True)  # Link to dimension
     level = Column(Integer, index=True)
     name = Column(String)
     sub_level = Column(String, nullable=True)  # e.g., "1.1a", "2.3b"
     category = Column(String, nullable=True)  # e.g., "Instrumented Assets & Lines"
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    dimension = relationship("Dimension")
 
 class RatingScale(Base):
     __tablename__ = "rating_scales"
@@ -74,8 +77,9 @@ class Assessment(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     area_id = Column(Integer, ForeignKey("areas.id"), nullable=True)
+    dimension_id = Column(Integer, ForeignKey("dimensions.id"), nullable=True)  # For specific dimension assessment
     plant_name = Column(String, nullable=True)
-    plant_location = Column(String, nullable=True)
+    shop_unit = Column(String, nullable=True)  # Press Shop, BIW 1, BIW 2, BIW 3, Paint Shop 1, Paint Shop 2, Assembly Line 1, Assembly Line 2
     assessment_date = Column(DateTime, default=datetime.utcnow)
     assessor_name = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
@@ -85,6 +89,15 @@ class Assessment(Base):
     level3_notes = Column(Text, nullable=True)
     level4_notes = Column(Text, nullable=True)
     level5_notes = Column(Text, nullable=True)
+    # Level image paths for expandable/collapsible sections
+    level1_image = Column(String, nullable=True)
+    level2_image = Column(String, nullable=True)
+    level3_image = Column(String, nullable=True)
+    level4_image = Column(String, nullable=True)
+    level5_image = Column(String, nullable=True)
+    # Count tracking
+    overall_count = Column(Integer, default=0)
+    checked_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

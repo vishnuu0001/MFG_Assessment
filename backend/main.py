@@ -533,6 +533,7 @@ class AreaResponse(BaseModel):
 
 class MaturityLevelResponse(BaseModel):
     id: int
+    dimension_id: Optional[int]
     level: int
     name: str
     sub_level: Optional[str]
@@ -559,7 +560,8 @@ class DimensionUpdate(BaseModel):
 
 class AssessmentCreate(BaseModel):
     plant_name: Optional[str] = None
-    plant_location: Optional[str] = None
+    shop_unit: Optional[str] = None
+    dimension_id: Optional[int] = None
     assessor_name: Optional[str] = None
     notes: Optional[str] = None
     level1_notes: Optional[str] = None
@@ -567,11 +569,19 @@ class AssessmentCreate(BaseModel):
     level3_notes: Optional[str] = None
     level4_notes: Optional[str] = None
     level5_notes: Optional[str] = None
+    level1_image: Optional[str] = None
+    level2_image: Optional[str] = None
+    level3_image: Optional[str] = None
+    level4_image: Optional[str] = None
+    level5_image: Optional[str] = None
+    overall_count: Optional[int] = 0
+    checked_count: Optional[int] = 0
 
 class AssessmentResponse(BaseModel):
     id: int
     plant_name: Optional[str] = None
-    plant_location: Optional[str] = None
+    shop_unit: Optional[str] = None
+    dimension_id: Optional[int] = None
     assessment_date: datetime
     assessor_name: Optional[str] = None
     notes: Optional[str] = None
@@ -580,6 +590,13 @@ class AssessmentResponse(BaseModel):
     level3_notes: Optional[str] = None
     level4_notes: Optional[str] = None
     level5_notes: Optional[str] = None
+    level1_image: Optional[str] = None
+    level2_image: Optional[str] = None
+    level3_image: Optional[str] = None
+    level4_image: Optional[str] = None
+    level5_image: Optional[str] = None
+    overall_count: Optional[int] = 0
+    checked_count: Optional[int] = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
@@ -610,6 +627,12 @@ def get_areas(db: Session = Depends(get_db)):
     """Get all manufacturing areas with their dimensions"""
     areas = db.query(Area).all()
     return areas
+
+@app.get("/api/mm/dimensions")
+def get_dimensions(db: Session = Depends(get_db)):
+    """Get all dimensions across all areas for assessment filtering"""
+    dimensions = db.query(Dimension).all()
+    return [{"id": dim.id, "name": dim.name, "area_id": dim.area_id} for dim in dimensions]
 
 @app.post("/api/mm/refresh-reports-data")
 def refresh_reports_data(db: Session = Depends(get_db)):
@@ -739,9 +762,12 @@ def update_dimension(dimension_id: int, update: DimensionUpdate, db: Session = D
     return {"status": "success", "dimension": dimension}
 
 @app.get("/api/mm/maturity-levels", response_model=List[MaturityLevelResponse])
-def get_maturity_levels(db: Session = Depends(get_db)):
-    """Get all maturity level definitions"""
-    levels = db.query(MaturityLevel).order_by(MaturityLevel.level, MaturityLevel.sub_level).all()
+def get_maturity_levels(dimension_id: int = None, db: Session = Depends(get_db)):
+    """Get maturity level definitions, optionally filtered by dimension"""
+    query = db.query(MaturityLevel)
+    if dimension_id:
+        query = query.filter(MaturityLevel.dimension_id == dimension_id)
+    levels = query.order_by(MaturityLevel.level, MaturityLevel.sub_level).all()
     return levels
 
 @app.post("/api/mm/assessments", response_model=AssessmentResponse)
@@ -754,8 +780,9 @@ def create_assessment(assessment: AssessmentCreate, db: Session = Depends(get_db
     
     new_assessment = Assessment(
         area_id=first_area.id,
+        dimension_id=assessment.dimension_id,
         plant_name=assessment.plant_name,
-        plant_location=assessment.plant_location,
+        shop_unit=assessment.shop_unit,
         assessor_name=assessment.assessor_name,
         notes=assessment.notes,
         level1_notes=assessment.level1_notes,
@@ -763,12 +790,25 @@ def create_assessment(assessment: AssessmentCreate, db: Session = Depends(get_db
         level3_notes=assessment.level3_notes,
         level4_notes=assessment.level4_notes,
         level5_notes=assessment.level5_notes,
+        level1_image=assessment.level1_image,
+        level2_image=assessment.level2_image,
+        level3_image=assessment.level3_image,
+        level4_image=assessment.level4_image,
+        level5_image=assessment.level5_image,
+        overall_count=assessment.overall_count,
+        checked_count=assessment.checked_count,
         assessment_date=datetime.utcnow()
     )
     db.add(new_assessment)
     db.commit()
     db.refresh(new_assessment)
     return new_assessment
+
+@app.get("/api/mm/assessments", response_model=List[AssessmentResponse])
+def get_all_assessments(db: Session = Depends(get_db)):
+    """Get all assessments"""
+    assessments = db.query(Assessment).order_by(Assessment.created_at.desc()).all()
+    return assessments
 
 @app.get("/api/mm/assessments/{assessment_id}", response_model=AssessmentResponse)
 def get_assessment(assessment_id: int, db: Session = Depends(get_db)):
@@ -788,8 +828,10 @@ def update_assessment(assessment_id: int, assessment: AssessmentCreate, db: Sess
     # Update fields
     if assessment.plant_name is not None:
         existing_assessment.plant_name = assessment.plant_name
-    if assessment.plant_location is not None:
-        existing_assessment.plant_location = assessment.plant_location
+    if assessment.shop_unit is not None:
+        existing_assessment.shop_unit = assessment.shop_unit
+    if assessment.dimension_id is not None:
+        existing_assessment.dimension_id = assessment.dimension_id
     if assessment.assessor_name is not None:
         existing_assessment.assessor_name = assessment.assessor_name
     if assessment.notes is not None:
@@ -804,6 +846,20 @@ def update_assessment(assessment_id: int, assessment: AssessmentCreate, db: Sess
         existing_assessment.level4_notes = assessment.level4_notes
     if assessment.level5_notes is not None:
         existing_assessment.level5_notes = assessment.level5_notes
+    if assessment.level1_image is not None:
+        existing_assessment.level1_image = assessment.level1_image
+    if assessment.level2_image is not None:
+        existing_assessment.level2_image = assessment.level2_image
+    if assessment.level3_image is not None:
+        existing_assessment.level3_image = assessment.level3_image
+    if assessment.level4_image is not None:
+        existing_assessment.level4_image = assessment.level4_image
+    if assessment.level5_image is not None:
+        existing_assessment.level5_image = assessment.level5_image
+    if assessment.overall_count is not None:
+        existing_assessment.overall_count = assessment.overall_count
+    if assessment.checked_count is not None:
+        existing_assessment.checked_count = assessment.checked_count
     
     existing_assessment.updated_at = datetime.utcnow()
     

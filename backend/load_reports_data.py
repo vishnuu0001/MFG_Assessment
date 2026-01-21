@@ -1,5 +1,5 @@
 """
-Load simulated Reports data from Excel into database
+Load Reports data from Excel into database with unique dimensions
 """
 import os
 import pandas as pd
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, Area, Dimension
 
 def load_reports_simulated_data():
-    """Load Reports sheet data from Excel into Areas and Dimensions"""
+    """Load Reports sheet data with unique dimensions (no duplicates)"""
     
     # Build path to Excel file
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,87 +24,62 @@ def load_reports_simulated_data():
     db = SessionLocal()
     
     try:
-        # Clear existing areas and dimensions
+        # Clear existing dimensions and areas
         db.query(Dimension).delete()
         db.query(Area).delete()
         db.commit()
-        print("Cleared existing areas and dimensions")
+        print("Cleared existing areas and dimensions\n")
         
-        current_area = None
-        area_obj = None
+        # Create a default "Operations Excellence" area
+        default_area = Area(
+            name="Operations Excellence",
+            description="Smart Factory Digital Maturity Assessment",
+            desired_level=3
+        )
+        db.add(default_area)
+        db.flush()
+        print(f"Created default area: {default_area.name}\n")
+        
+        dimension_names = set()  # Track unique dimension names
         dimension_count = 0
         
-        # Parse the data
+        # Parse the data to extract unique dimension names
         for idx, row in df.iterrows():
             if idx < 3:  # Skip header rows
                 continue
             
-            area_name = str(row[0]) if pd.notna(row[0]) else ""
             col1_value = str(row[1]) if pd.notna(row[1]) else ""
-            col8_value = row[8] if pd.notna(row[8]) else None
             
-            # Check if this is an area header (has area name in column 0)
-            if area_name and area_name != "nan":
-                current_area = area_name
+            # Check if this is a dimension name
+            if col1_value and col1_value != "nan" and col1_value != "Dimension" and col1_value.strip():
+                dimension_name = col1_value.strip()
                 
-                # Get desired level from the first row of the area
-                if col8_value and str(col8_value) != "nan":
-                    try:
-                        desired_level = int(float(col8_value))
-                    except:
-                        desired_level = 3
-                else:
-                    desired_level = 3
-                
-                # Create Area
-                area_obj = Area(
-                    name=current_area,
-                    description=f"{current_area} Digital Maturity",
-                    desired_level=desired_level
-                )
-                db.add(area_obj)
-                db.flush()  # Get the ID
-                print(f"\nCreated Area: {current_area} (Desired Level: {desired_level})")
-                
-                # Also add the first dimension from this row
-                if col1_value and col1_value != "nan" and col1_value != "Dimension":
-                    dimension_name = col1_value
-                    current_level = random.randint(max(1, desired_level - 2), min(desired_level + 1, 5))
+                # Only add if not already seen (ensure uniqueness)
+                if dimension_name not in dimension_names:
+                    dimension_names.add(dimension_name)
+                    
+                    # Create dimension with random current level for simulation
+                    current_level = random.randint(1, 3)
+                    desired_level = random.randint(3, 4)
                     
                     dimension = Dimension(
                         name=dimension_name,
-                        area_id=area_obj.id,
+                        area_id=default_area.id,
                         current_level=current_level,
                         desired_level=desired_level
                     )
                     db.add(dimension)
                     dimension_count += 1
-                    print(f"  Added dimension: {dimension_name} (Current: {current_level}, Desired: {desired_level})")
-                continue
-            
-            # Check if this is a dimension row (no area name, but has dimension name in column 1)
-            dimension_name = col1_value
-            
-            if area_obj and dimension_name and dimension_name != "nan" and dimension_name != "Dimension":
-                # Assign current level (simulated with randomization)
-                current_level = random.randint(max(1, area_obj.desired_level - 2), min(area_obj.desired_level + 1, 5))
-                
-                dimension = Dimension(
-                    name=dimension_name,
-                    area_id=area_obj.id,
-                    current_level=current_level,
-                    desired_level=area_obj.desired_level
-                )
-                db.add(dimension)
-                dimension_count += 1
-                print(f"  Added dimension: {dimension_name} (Current: {current_level}, Desired: {area_obj.desired_level})")
+                    print(f"✓ Added dimension: {dimension_name} (Current: {current_level}, Desired: {desired_level})")
         
         db.commit()
-        print(f"\n✅ Successfully loaded {dimension_count} dimensions across areas")
+        print(f"\n✅ Successfully loaded {dimension_count} unique dimensions")
         return dimension_count
         
     except Exception as e:
-        print(f"Error loading reports data: {e}")
+        print(f"❌ Error loading reports data: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         raise
     finally:
