@@ -14,6 +14,8 @@ const Reports = ({ onNavigate }) => {
   const [dimensions, setDimensions] = useState([]);
   const [selectedDimension, setSelectedDimension] = useState('');
   const [assessments, setAssessments] = useState([]);
+  const [shopUnits, setShopUnits] = useState([]);
+  const [shopUnitFilter, setShopUnitFilter] = useState('');
   const [expandedLevels, setExpandedLevels] = useState({
     1: true,
     2: false,
@@ -36,12 +38,53 @@ const Reports = ({ onNavigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDimension]);
 
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopUnitFilter]);
+
+  const dedupeByName = (items) => {
+    const seen = new Set();
+    return items.filter((d) => {
+      const key = (d.name || '').toLowerCase().trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const normalizeStr = (value) => (value || '').toString().toLowerCase().trim();
+
+  const matchesDimension = (assessment, dimensionFilter) => {
+    if (!dimensionFilter) return true;
+    const dimId = parseInt(dimensionFilter, 10);
+    if (Number.isNaN(dimId)) return true;
+    return assessment.dimension_id === dimId || normalizeStr(assessment.dimension_id) === normalizeStr(dimensionFilter);
+  };
+
+  const matchesShopUnit = (assessment, shopFilter) => {
+    if (!shopFilter) return true;
+    return normalizeStr(assessment.shop_unit) === normalizeStr(shopFilter);
+  };
+
+  const pickLatestAssessment = (list, dimensionFilter, shopFilter) => {
+    const filtered = list
+      .filter((a) => matchesDimension(a, dimensionFilter))
+      .filter((a) => matchesShopUnit(a, shopFilter));
+    if (!filtered.length) return undefined;
+    return [...filtered].sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+      return bTime - aTime;
+    })[0];
+  };
+
   const fetchDimensions = async () => {
     try {
       const response = await fetch(apiUrl('/api/mm/dimensions'));
       if (response.ok) {
         const data = await response.json();
-        setDimensions(Array.isArray(data) ? data : []);
+        setDimensions(Array.isArray(data) ? dedupeByName(data) : []);
       }
     } catch (error) {
       console.error('Error fetching dimensions:', error);
@@ -63,26 +106,40 @@ const Reports = ({ onNavigate }) => {
         setMaturityLevels(Array.isArray(mlData) ? mlData : []);
       }
       
-      // Fetch latest assessment selections
-      const selResponse = await fetch(apiUrl(API_ENDPOINTS.checksheetSelections));
-      if (selResponse.ok) {
-        const selData = await selResponse.json();
-        if (Array.isArray(selData)) {
-          const selectedMap = {};
-          selData.forEach(sel => {
-            if (sel.is_selected) {
-              selectedMap[sel.maturity_level_id] = true;
-            }
-          });
-          setSelectedItems(selectedMap);
-        }
-      }
-
       // Fetch assessments for filtering
       const assessResponse = await fetch(apiUrl('/api/mm/assessments'));
       if (assessResponse.ok) {
         const assessData = await assessResponse.json();
-        setAssessments(Array.isArray(assessData) ? assessData : []);
+        const list = Array.isArray(assessData) ? assessData : [];
+        setAssessments(list);
+
+        const units = Array.from(new Set(list.map(a => (a.shop_unit || '').trim()).filter(Boolean)));
+        setShopUnits(units);
+
+        let activeAssessment = pickLatestAssessment(list, selectedDimension, shopUnitFilter);
+        if (!activeAssessment && selectedDimension) {
+          activeAssessment = pickLatestAssessment(list, selectedDimension, '');
+        }
+
+        if (activeAssessment) {
+          const selResponse = await fetch(apiUrl(`/api/mm/checksheet-selections/${activeAssessment.id}`));
+          if (selResponse.ok) {
+            const selData = await selResponse.json();
+            if (Array.isArray(selData)) {
+              const selectedMap = {};
+              selData.forEach(sel => {
+                if (sel.is_selected) {
+                  selectedMap[sel.maturity_level_id] = true;
+                }
+              });
+              setSelectedItems(selectedMap);
+            }
+          } else {
+            setSelectedItems({});
+          }
+        } else {
+          setSelectedItems({});
+        }
       }
       
     } catch (error) {
@@ -171,9 +228,9 @@ const Reports = ({ onNavigate }) => {
     }));
   };
 
-  const getCategoryProgress = (items) => {
+  const getCategoryProgress = (items, selectionState) => {
     if (items.length === 0) return { total: 0, completed: 0, percentage: 0 };
-    const completed = items.filter(item => selectedItems[item.id]).length;
+    const completed = items.filter(item => selectionState[item.id]).length;
     return {
       total: items.length,
       completed,
@@ -181,13 +238,13 @@ const Reports = ({ onNavigate }) => {
     };
   };
 
-  const getLevelProgress = (categories) => {
+  const getLevelProgress = (categories, selectionState) => {
     let totalItems = 0;
     let completedItems = 0;
     
     Object.values(categories).forEach(category => {
       totalItems += category.items.length;
-      completedItems += category.items.filter(item => selectedItems[item.id]).length;
+      completedItems += category.items.filter(item => selectionState[item.id]).length;
     });
     
     return {
@@ -199,6 +256,47 @@ const Reports = ({ onNavigate }) => {
 
   const groupedData = groupByLevelAndCategory();
   const levelKeys = [1, 2, 3, 4, 5];
+
+  const dimensionOnly = assessments.filter((a) => matchesDimension(a, selectedDimension));
+  const filteredAssessments = dimensionOnly.filter((a) => matchesShopUnit(a, shopUnitFilter));
+
+  let listForTotals = filteredAssessments;
+  if (!filteredAssessments.length && selectedDimension) {
+    listForTotals = dimensionOnly;
+  } else if (!selectedDimension && !shopUnitFilter && !filteredAssessments.length) {
+    listForTotals = assessments;
+  }
+
+  const latestAssessment = pickLatestAssessment(
+    listForTotals,
+    selectedDimension,
+    listForTotals === dimensionOnly ? '' : shopUnitFilter
+  );
+
+  const buildAutoSelection = (items, count) => {
+    if (!items.length || !count) return {};
+    const sorted = [...items].sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level;
+      const sa = a.sub_level || '';
+      const sb = b.sub_level || '';
+      if (sa !== sb) return sa.localeCompare(sb);
+      return (a.id || 0) - (b.id || 0);
+    });
+    const map = {};
+    for (let i = 0; i < Math.min(count, sorted.length); i += 1) {
+      map[sorted[i].id] = true;
+    }
+    return map;
+  };
+
+  const selectionState = Object.keys(selectedItems).length
+    ? selectedItems
+    : buildAutoSelection(maturityLevels, latestAssessment?.checked_count || 0);
+  const totalCapabilities = latestAssessment?.overall_count || 0;
+  const completedCount = latestAssessment?.checked_count || 0;
+  const overallPercentage = totalCapabilities > 0
+    ? Math.round((completedCount / totalCapabilities) * 100)
+    : 0;
 
   if (loading) {
     return <LoadingSpinner message="Loading Dashboard..." />;
@@ -226,9 +324,9 @@ const Reports = ({ onNavigate }) => {
         </button>
       </div>
 
-      {/* Dimension Filter */}
+      {/* Dimension & Shop Unit Filters */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-bold text-slate-600 mb-2">
               Filter by Dimension/Area
@@ -244,23 +342,72 @@ const Reports = ({ onNavigate }) => {
               ))}
             </select>
           </div>
+          <div className="flex-1">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              Filter by Shop Unit
+            </label>
+            <select
+              value={shopUnitFilter}
+              onChange={(e) => setShopUnitFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white"
+            >
+              <option value="">All Shop Units</option>
+              {shopUnits.map(unit => (
+                <option key={unit} value={unit}>{unit}</option>
+              ))}
+            </select>
+          </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <div className="text-xs text-slate-500 mb-1">Selected Dimension</div>
-            <div className="text-lg font-bold text-slate-700">
-              {selectedDimension ? dimensions.find(d => d.id === parseInt(selectedDimension))?.name : 'All'}
+            <div className="text-xs text-slate-500 mb-1">Selected</div>
+            <div className="text-sm font-bold text-slate-700">
+              {selectedDimension ? dimensions.find(d => d.id === parseInt(selectedDimension))?.name : 'All Dimensions'}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">Shop Unit</div>
+            <div className="text-sm font-bold text-slate-700">
+              {shopUnitFilter || 'All Shop Units'}
             </div>
           </div>
         </div>
-        {selectedDimension && (
+        {(selectedDimension || shopUnitFilter) && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-700">
-              📊 Showing assessment data for <strong>{dimensions.find(d => d.id === parseInt(selectedDimension))?.name}</strong>.
-              {assessments.filter(a => a.dimension_id === parseInt(selectedDimension)).length === 0 && 
+              📊 Showing assessment data for
+              {selectedDimension && (
+                <> <strong>{dimensions.find(d => d.id === parseInt(selectedDimension))?.name}</strong></>
+              )}
+              {shopUnitFilter && (
+                <> in <strong>{shopUnitFilter}</strong></>
+              )}
+              {filteredAssessments.length === 0 && 
                 <span className="ml-1 font-semibold text-orange-600">No assessment data captured yet (NA).</span>
               }
             </p>
           </div>
         )}
+      </div>
+
+      {/* Overall Summary - top placement */}
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-md">
+        <div className="flex items-center justify-between flex-wrap gap-6">
+          <div>
+            <h3 className="font-bold text-lg mb-1">Overall Assessment Progress</h3>
+            <p className="text-slate-300 text-sm">Track your digital transformation journey</p>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="text-center">
+              <p className="text-4xl font-black">{overallPercentage}%</p>
+              <p className="text-slate-300 text-xs uppercase tracking-wider">Overall Rating</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-black">{completedCount}</p>
+              <p className="text-slate-300 text-xs uppercase tracking-wider">Completed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-black">{totalCapabilities}</p>
+              <p className="text-slate-300 text-xs uppercase tracking-wider">Total Capabilities</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* No Data Message */}
@@ -285,7 +432,7 @@ const Reports = ({ onNavigate }) => {
           const categories = levelData.categories;
           const categoryCount = Object.keys(categories).length;
           const levelName = levelData.name || `Level ${level}`;
-          const levelProgress = getLevelProgress(categories);
+          const levelProgress = getLevelProgress(categories, selectionState);
 
           return (
             <div key={level} className="bg-white rounded-2xl shadow-md overflow-hidden border border-slate-200">
@@ -326,7 +473,7 @@ const Reports = ({ onNavigate }) => {
                   ) : (
                     Object.entries(categories).map(([categoryKey, category]) => {
                       const isCategoryExpanded = expandedCategories[categoryKey];
-                      const progress = getCategoryProgress(category.items);
+                      const progress = getCategoryProgress(category.items, selectionState);
                       
                       return (
                         <div key={categoryKey} className="bg-white rounded-lg border-2 border-slate-200 overflow-hidden">
@@ -362,7 +509,7 @@ const Reports = ({ onNavigate }) => {
                           {isCategoryExpanded && category.items.length > 0 && (
                             <div className="p-4 space-y-2 border-t border-slate-200">
                               {category.items.map((item) => {
-                                const isCompleted = selectedItems[item.id];
+                                const isCompleted = selectionState[item.id];
                                 
                                 return (
                                   <div
@@ -408,28 +555,6 @@ const Reports = ({ onNavigate }) => {
           );
         })}
       </div>
-
-      {/* Summary Footer */}
-      {maturityLevels.length > 0 && (
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-lg mb-1">Overall Assessment Progress</h3>
-              <p className="text-slate-300 text-sm">Track your digital transformation journey</p>
-            </div>
-            <div className="flex items-center gap-8">
-              <div className="text-center">
-                <p className="text-3xl font-black">{Object.keys(selectedItems).filter(k => selectedItems[k]).length}</p>
-                <p className="text-slate-300 text-xs uppercase tracking-wider">Completed</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-black">{maturityLevels.filter(ml => ml.sub_level && /[a-z]$/.test(ml.sub_level)).length}</p>
-                <p className="text-slate-300 text-xs uppercase tracking-wider">Total Capabilities</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <NavigationButtons
         onNavigate={onNavigate}

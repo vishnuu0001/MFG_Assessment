@@ -231,12 +231,22 @@ const SmartFactoryChecksheet = ({ onNavigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDimension, dimensions]);
 
+  const dedupeByName = (items) => {
+    const seen = new Set();
+    return items.filter((d) => {
+      const key = (d.name || '').toLowerCase().trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const fetchDimensions = async () => {
     try {
       const response = await fetch(apiUrl('/api/mm/dimensions'));
       if (response.ok) {
         const data = await response.json();
-        const dimensionsArray = Array.isArray(data) ? data : [];
+        const dimensionsArray = Array.isArray(data) ? dedupeByName(data) : [];
         setDimensions(dimensionsArray);
         
         // Auto-select first dimension if none is selected
@@ -286,6 +296,12 @@ const SmartFactoryChecksheet = ({ onNavigate }) => {
     }));
   };
 
+  const handleTotalCountChange = (itemId, value) => {
+    const sanitized = value === '' ? '' : Math.max(0, parseInt(value, 10) || 0);
+    // Enforce a single total count across all levels/items
+    setItemTotalCounts({ [itemId]: sanitized });
+  };
+
   const groupByLevel = () => {
     const grouped = {};
     maturityLevels.forEach(ml => {
@@ -306,19 +322,23 @@ const SmartFactoryChecksheet = ({ onNavigate }) => {
 
   // Calculate overall maturity based on total and checked counts from all items
   const calculateOverallMaturity = () => {
-    let totalSum = 0;
+    const totals = Object.values(itemTotalCounts).map(val => parseInt(val, 10) || 0);
+    const totalSum = totals.length ? totals[0] : 0;
+
     let checkedSum = 0;
-    
-    Object.keys(itemTotalCounts).forEach(itemId => {
-      const total = parseInt(itemTotalCounts[itemId]) || 0;
-      const checked = parseInt(itemCheckedCounts[itemId]) || 0;
-      totalSum += total;
-      checkedSum += checked;
+    Object.values(itemCheckedCounts).forEach(val => {
+      checkedSum += parseInt(val, 10) || 0;
     });
-    
+
+    if (totalSum > 0 && checkedSum > totalSum) {
+      checkedSum = totalSum;
+    }
+
     const maturity = totalSum > 0 ? Math.round((checkedSum / totalSum) * 100) : 0;
     return { totalSum, checkedSum, maturity };
   };
+
+  const { totalSum, checkedSum } = calculateOverallMaturity();
 
   const handleSave = async () => {
     if (!assessmentId) {
@@ -517,6 +537,24 @@ All item notes and counts have been saved successfully!`);
         </div>
       </div>
 
+      {/* Total/Checked Summary */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-6 items-center">
+        <div>
+          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest mb-1">Totals Entered</h3>
+          <p className="text-slate-500 text-sm">Applies across all levels</p>
+        </div>
+        <div className="flex gap-4 flex-wrap">
+          <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Count Entered</div>
+            <div className="text-2xl font-black text-blue-800">{totalSum}</div>
+          </div>
+          <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Checked Count Entered</div>
+            <div className="text-2xl font-black text-emerald-800">{checkedSum}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Maturity Levels */}
       <div className="space-y-4">
         {Object.entries(groupedLevels).map(([level, data]) => (
@@ -631,7 +669,7 @@ All item notes and counts have been saved successfully!`);
                                   type="number"
                                   min="0"
                                   value={itemTotalCounts[item.id] || ''}
-                                  onChange={(e) => setItemTotalCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                  onChange={(e) => handleTotalCountChange(item.id, e.target.value)}
                                   className="w-full px-2 py-2 border-2 border-blue-300 rounded-lg text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   placeholder="0"
                                 />
