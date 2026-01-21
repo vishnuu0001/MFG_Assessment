@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// Clean build - selectedItems state removed
 import { ChevronDown, ChevronRight, Save, RefreshCw, FileJson, FileSpreadsheet } from 'lucide-react';
 import { apiUrl } from '../../config';
 import { getLevelColor, getLevelBadgeColor } from '../../utils/colorUtils';
