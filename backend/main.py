@@ -11,6 +11,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db, Area, Dimension, MaturityLevel, RatingScale, Assessment, DimensionAssessment, ChecksheetSelection, SessionLocal
@@ -24,6 +25,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def normalize_dimension_name(value: str) -> str:
+    """Case-insensitive normalization that aligns '&' with 'and'."""
+    if not value:
+        return ""
+    return " ".join(value.lower().replace("&", "and").split())
 
 # Initialize database on startup (only for local development)
 # For serverless (Vercel), initialization happens in api/index.py
@@ -1250,9 +1258,29 @@ def get_rating_scales(db: Session = Depends(get_db)):
 @app.get("/api/mm/rating-scales/{dimension_name}")
 def get_rating_scale_by_dimension(dimension_name: str, db: Session = Depends(get_db)):
     """Get rating scales for a specific dimension"""
-    scales = db.query(RatingScale).filter(RatingScale.dimension_name == dimension_name).order_by(RatingScale.level).all()
+    normalized_param = normalize_dimension_name(dimension_name)
+
+    normalized_column = func.replace(func.lower(RatingScale.dimension_name), "&", "and")
+
+    scales = (
+        db.query(RatingScale)
+        .filter(normalized_column == normalized_param)
+        .order_by(RatingScale.level)
+        .all()
+    )
+
+    if not scales:
+        # Fallback: allow partial match in case of extra descriptors
+        scales = (
+            db.query(RatingScale)
+            .filter(normalized_column.like(f"%{normalized_param}%"))
+            .order_by(RatingScale.level)
+            .all()
+        )
+
     if not scales:
         raise HTTPException(status_code=404, detail="Rating scales not found for this dimension")
+
     return scales
 
 @app.post("/api/mm/simulate-update/{dimension_id}")
