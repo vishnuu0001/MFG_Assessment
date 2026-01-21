@@ -1028,172 +1028,50 @@ def calculate_dimension_scores(assessment_id: int, db: Session = Depends(get_db)
 
 @app.post("/api/mm/refresh-simulated-data")
 def refresh_simulated_data(db: Session = Depends(get_db)):
-    """Refresh all simulated data from Excel file"""
+    """Refresh CheckSheet maturity levels data from CheckSheetData.xlsx"""
     try:
-        import os
-        import pandas as pd
+        # Use the new load_checksheet_data function
+        from load_checksheet_data import load_checksheet_data
         
-        # Build path to Excel file in backend directory
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        excel_path = os.path.join(backend_dir, 'MM_Data.xlsx')
+        # Close the database connection before calling the loader
+        # (the loader creates its own session)
+        load_checksheet_data()
         
-        if not os.path.exists(excel_path):
-            raise HTTPException(status_code=404, detail=f"Excel file not found at {excel_path}")
+        # Get count of loaded records
+        count = db.query(MaturityLevel).count()
         
-        # Clear existing maturity levels
-        db.query(MaturityLevel).delete()
-        db.commit()
-        
-        # Read the Excel sheet
-        df = pd.read_excel(excel_path, sheet_name='Smart Factory CheckSheet', header=None)
-        
-        current_level = None
-        current_level_name = None
-        loaded_count = 0
-        
-        for idx, row in df.iterrows():
-            if idx < 3:  # Skip header rows
-                continue
-            
-            # Check if this is a level header
-            first_col = str(row[1]) if pd.notna(row[1]) else ""
-            
-            if "Level" in first_col and ":" in first_col:
-                parts = first_col.split(":")
-                level_part = parts[0].strip()
-                level_num = int(level_part.replace("Level", "").strip())
-                level_name = parts[1].strip() if len(parts) > 1 else f"Level {level_num}"
-                
-                current_level = level_num
-                current_level_name = level_name
-                continue
-            
-            # Check for capability description
-            sub_level_col = str(row[0]) if pd.notna(row[0]) else ""
-            description_col = str(row[1]) if pd.notna(row[1]) else ""
-            
-            if description_col == "SUV" or description_col == "nan" or not description_col:
-                continue
-            
-            if sub_level_col and sub_level_col != "nan":
-                sub_level = sub_level_col
-                description = description_col
-                
-                # Determine category from dimension columns
-                category = None
-                dimension_map = {
-                    2: "Asset connectivity & OEE",
-                    3: "MES & system integration",
-                    4: "Traceability & quality",
-                    5: "Maintenance & reliability",
-                    6: "Logistics & supply chain",
-                    7: "Workforce & UX",
-                    8: "Sustainability & energy",
-                    9: "Multi-plant orchestration"
-                }
-                
-                for col_idx in range(2, 11):
-                    if pd.notna(row[col_idx]) and str(row[col_idx]).strip():
-                        category = dimension_map.get(col_idx, "General")
-                        break
-                
-                if current_level and description:
-                    maturity_level = MaturityLevel(
-                        level=current_level,
-                        name=current_level_name or f"Level {current_level}",
-                        sub_level=sub_level,
-                        category=category,
-                        description=description.strip()
-                    )
-                    db.add(maturity_level)
-                    loaded_count += 1
-        
-        db.commit()
         return {
             "status": "success",
-            "message": f"Successfully loaded {loaded_count} maturity level items",
-            "count": loaded_count
+            "message": f"CheckSheet data refreshed successfully - {count} maturity criteria loaded",
+            "records_loaded": count
         }
-        
     except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error refreshing data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error refreshing checksheet data: {str(e)}")
 
 @app.post("/api/mm/refresh-rating-scales")
 def refresh_rating_scales(db: Session = Depends(get_db)):
-    """Refresh Rating Scales data from Excel file"""
+    """Refresh Rating Scales data from CheckSheetData.xlsx"""
     try:
-        import os
-        import pandas as pd
+        # Use the new load_rating_scales_data function
+        from load_rating_scales_data import load_rating_scales_data
         
-        # Build path to Excel file in backend directory
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        excel_path = os.path.join(backend_dir, 'MM_Data.xlsx')
+        # Close the database connection before calling the loader
+        # (the loader creates its own session)
+        load_rating_scales_data()
         
-        if not os.path.exists(excel_path):
-            raise HTTPException(status_code=404, detail=f"Excel file not found at {excel_path}")
+        # Get count of loaded records
+        count = db.query(RatingScale).count()
         
-        # Read the Rating Scales Excel sheet (without headers)
-        df = pd.read_excel(excel_path, sheet_name='Rating Scales', header=None)
-        
-        # Clear existing rating scales
-        db.query(RatingScale).delete()
-        db.commit()
-        
-        # Dimension names are in row 5 (index 5)
-        # Extract dimension names from row 5
-        dimension_row = df.iloc[5]
-        dimensions = []
-        for col_idx in [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]:
-            if col_idx < len(dimension_row):
-                dim_name = dimension_row.iloc[col_idx]
-                if pd.notna(dim_name) and str(dim_name).strip() and 'Digital Maturity' not in str(dim_name):
-                    dimensions.append((col_idx, str(dim_name).strip()))
-        
-        loaded_count = 0
-        
-        # Extract data for levels 1-5 (rows 9-13)
-        for col_idx, dimension_name in dimensions:
-            for level_row_idx in range(9, 14):  # Rows 9-13 for levels 1-5
-                level = level_row_idx - 8  # Convert to level 1-5
-                
-                # Get the rating name and description
-                rating_cell = df.iloc[level_row_idx, col_idx]
-                description_cell = df.iloc[level_row_idx, col_idx + 1] if col_idx + 1 < len(df.columns) else None
-                
-                # Business relevance is in rows 18-20 (for levels 1-3 only)
-                business_relevance = None
-                if level <= 3:
-                    business_row_idx = 17 + level  # 18, 19, 20 for levels 1, 2, 3
-                    if business_row_idx < len(df):
-                        business_cell = df.iloc[business_row_idx, col_idx + 1]
-                        if pd.notna(business_cell):
-                            business_relevance = str(business_cell).strip()
-                
-                if pd.notna(rating_cell):
-                    rating_name = str(rating_cell).strip()
-                    rating_desc = str(description_cell).strip() if pd.notna(description_cell) else ""
-                    
-                    rating_scale = RatingScale(
-                        dimension_name=dimension_name,
-                        level=level,
-                        rating_name=rating_name[:200] if len(rating_name) > 200 else rating_name,
-                        digital_maturity_description=rating_desc,
-                        business_relevance=business_relevance
-                    )
-                    db.add(rating_scale)
-                    loaded_count += 1
-        
-        db.commit()
         return {
             "status": "success",
-            "message": f"Successfully loaded rating scales",
-            "dimension_count": len(dimensions),
-            "rating_count": loaded_count
+            "message": f"Rating Scales data refreshed successfully - {count} records loaded",
+            "records_loaded": count
         }
-        
     except Exception as e:
-        db.rollback()
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error refreshing rating scales: {str(e)}")
 
 @app.post("/api/mm/generate-report")
