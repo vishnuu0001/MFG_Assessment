@@ -1,0 +1,118 @@
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Calendar, Filter, TrendingUp, Target, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, RefreshCw, Calculator } from 'lucide-react';
+import { apiUrl, API_BASE_URL } from '../../config';
+
+const Reports = () => {
+  const [areas, setAreas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedSections, setExpandedSections] = useState({});
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastCalculated, setLastCalculated] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Log the API URL being used for debugging
+  useEffect(() => {
+    console.log('🔍 API Base URL:', API_BASE_URL);
+    console.log('🔍 Full API endpoint:', apiUrl('/api/mm/areas'));
+  }, []);
+
+  useEffect(() => {
+    fetchAreas();
+    
+    // Auto-refresh every 5 seconds for streaming data demo
+    if (autoRefresh) {
+      const interval = setInterval(fetchAreas, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  const fetchAreas = async () => {
+    try {
+      setError(null);
+      const url = apiUrl('/api/mm/areas');
+      console.log('📡 Fetching from:', url);
+      
+      const response = await fetch(url);
+      
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch areas:', response.status, response.statusText, errorText);
+        setError(`API Error: ${response.status} ${response.statusText}`);
+        setAreas([]);
+        setLoading(false);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('✅ Received data:', data);
+      
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setAreas(data);
+        
+        // Expand all areas by default to show the data
+        if (data.length > 0) {
+          const expandedState = {};
+          data.forEach(area => {
+            expandedState[area.id] = true;
+          });
+          setExpandedSections(expandedState);
+        }
+      } else {
+        console.error('⚠️ Areas data is not an array:', data);
+        setAreas([]);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('💥 Error fetching areas:', error);
+      setError(`Network Error: ${error.message}`);
+      setAreas([]);
+      setLoading(false);
+    }
+  };
+
+  const refreshSimulatedData = async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      const url = apiUrl('/api/mm/refresh-reports-data');
+      console.log('🔄 Refreshing data from:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Refresh failed:', errorText);
+        setError(`Refresh failed: ${response.status}`);
+        alert(`❌ Error: ${response.status} - ${errorText}`);
+        setRefreshing(false);
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('✅ Refresh result:', result);
+      
+      if (response.ok) {
+        // Reload the areas
+        await fetchAreas();
+        alert(`✅ ${result.message}\n\n${result.area_count} Areas\n${result.dimension_count} Dimensions`);
+      } else {
+        alert(`❌ Error: ${result.detail || 'Failed to refresh data'}`);
+      }
+    } catch (error) {
+      console.error('💥 Error refreshing data:', error);
+      setError(`Refresh error: ${error.message}`);
+      alert('❌ Error refreshing simulated data. Check console for details.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // ... rest of the component remains the same
