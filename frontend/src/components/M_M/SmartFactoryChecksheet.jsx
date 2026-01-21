@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Square, ChevronDown, ChevronRight, Save, RefreshCw, Upload, FileJson, FileSpreadsheet } from 'lucide-react';
 import { apiUrl } from '../../config';
+import { getLevelColor, getLevelBadgeColor } from '../../utils/colorUtils';
+import { API_ENDPOINTS } from '../../utils/constants';
+import LoadingSpinner from '../shared/LoadingSpinner';
+import NavigationButtons from '../shared/NavigationButtons';
 
-const SmartFactoryChecksheet = () => {
+const SmartFactoryChecksheet = ({ onNavigate }) => {
   const [maturityLevels, setMaturityLevels] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
   const [expandedLevels, setExpandedLevels] = useState({
@@ -31,7 +35,7 @@ const SmartFactoryChecksheet = () => {
   const initializeAssessment = async () => {
     try {
       // Create a new assessment session
-      const response = await fetch(apiUrl('/api/mm/assessments'), {
+      const response = await fetch(apiUrl(API_ENDPOINTS.assessments), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +83,7 @@ const SmartFactoryChecksheet = () => {
 
   const fetchMaturityLevels = async () => {
     try {
-      const response = await fetch(apiUrl('/api/mm/maturity-levels'));
+      const response = await fetch(apiUrl(API_ENDPOINTS.maturityLevels));
       
       if (!response.ok) {
         console.error('Failed to fetch maturity levels:', response.status, response.statusText);
@@ -211,27 +215,6 @@ const SmartFactoryChecksheet = () => {
     }
   };
 
-  const getLevelColor = (level) => {
-    const colors = {
-      1: 'from-red-500 to-red-600',
-      2: 'from-orange-500 to-orange-600',
-      3: 'from-yellow-500 to-yellow-600',
-      4: 'from-blue-500 to-blue-600',
-      5: 'from-green-500 to-green-600'
-    };
-    return colors[level] || 'from-gray-500 to-gray-600';
-  };
-
-  const getLevelBadgeColor = (level) => {
-    const colors = {
-      1: 'bg-red-100 text-red-700 border-red-200',
-      2: 'bg-orange-100 text-orange-700 border-orange-200',
-      3: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      4: 'bg-blue-100 text-blue-700 border-blue-200',
-      5: 'bg-green-100 text-green-700 border-green-200'
-    };
-    return colors[level] || 'bg-gray-100 text-gray-700 border-gray-200';
-  };
 
   const groupByLevel = () => {
     const grouped = {};
@@ -534,6 +517,14 @@ const SmartFactoryChecksheet = () => {
           </div>
         </div>
       </div>
+
+      <NavigationButtons
+        onNavigate={onNavigate}
+        previousIndex={3}
+        nextIndex={1}
+        previousLabel="Matrices"
+        nextLabel="Dashboard"
+      />
     </div>
   );
 };

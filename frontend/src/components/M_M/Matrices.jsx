@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import NavigationButtons from '../shared/NavigationButtons';
+import { getCategoryColors } from '../../utils/colorUtils';
 
-const Matrices = () => {
+const Matrices = ({ onNavigate }) => {
   const [expandedCategories, setExpandedCategories] = useState({
     operations: true,
     quality: true,
@@ -26,7 +28,7 @@ const Matrices = () => {
       id: 'operations',
       name: 'Operations & Flow',
       icon: BarChart3,
-      color: 'blue',
+      color: 'red',
       metrics: [
         "OEE uplift",
         "Throughput increase",
@@ -44,7 +46,7 @@ const Matrices = () => {
       id: 'quality',
       name: 'Quality & Traceability',
       icon: TrendingUp,
-      color: 'purple',
+      color: 'slate',
       metrics: [
         "FPY improvement",
         "Warranty claims reduction",
@@ -58,7 +60,7 @@ const Matrices = () => {
       id: 'assets',
       name: 'Assets, Maintenance & Energy',
       icon: Package,
-      color: 'emerald',
+      color: 'red',
       metrics: [
         "MTBF increase",
         "MTTR reduction",
@@ -82,23 +84,17 @@ const Matrices = () => {
   ];
 
   const colorClasses = {
-    blue: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: 'bg-blue-100 text-blue-600',
-      text: 'text-blue-600'
+    red: {
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      icon: 'bg-red-100 text-red-600',
+      text: 'text-red-600'
     },
-    purple: {
-      bg: 'bg-purple-50',
-      border: 'border-purple-200',
-      icon: 'bg-purple-100 text-purple-600',
-      text: 'text-purple-600'
-    },
-    emerald: {
-      bg: 'bg-emerald-50',
-      border: 'border-emerald-200',
-      icon: 'bg-emerald-100 text-emerald-600',
-      text: 'text-emerald-600'
+    slate: {
+      bg: 'bg-slate-50',
+      border: 'border-slate-200',
+      icon: 'bg-slate-100 text-slate-600',
+      text: 'text-slate-600'
     }
   };
 
@@ -191,20 +187,28 @@ const Matrices = () => {
           </div>
           <div className="flex gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{categories[0].metrics.length}</div>
+              <div className="text-2xl font-bold text-red-600">{categories[0].metrics.length}</div>
               <div className="text-xs text-slate-500 uppercase">Operations</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{categories[1].metrics.length}</div>
+              <div className="text-2xl font-bold text-slate-600">{categories[1].metrics.length}</div>
               <div className="text-xs text-slate-500 uppercase">Quality</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-emerald-600">{categories[2].metrics.length}</div>
+              <div className="text-2xl font-bold text-red-600">{categories[2].metrics.length}</div>
               <div className="text-xs text-slate-500 uppercase">Assets</div>
             </div>
           </div>
         </div>
       </div>
+
+      <NavigationButtons
+        onNavigate={onNavigate}
+        previousIndex={2}
+        nextIndex={0}
+        previousLabel="Rating Scales"
+        nextLabel="Smart Factory Assessment"
+      />
     </div>
   );
 };

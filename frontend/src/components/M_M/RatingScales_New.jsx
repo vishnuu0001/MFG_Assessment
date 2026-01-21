@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Target } from 'lucide-react';
+import { ChevronDown, ChevronRight, Target, RefreshCw, Loader } from 'lucide-react';
 import { apiUrl } from '../../config';
-import { getDimensionColor, getLevelBadgeColor } from '../../utils/colorUtils';
-import { API_ENDPOINTS, LEVEL_NAMES } from '../../utils/constants';
-import LoadingSpinner from '../shared/LoadingSpinner';
-import NavigationButtons from '../shared/NavigationButtons';
 
-const RatingScales = ({ onNavigate }) => {
+const RatingScales = () => {
   const [ratingScales, setRatingScales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedDimensions, setExpandedDimensions] = useState({});
 
   const fetchRatingScales = async () => {
     try {
       setLoading(true);
-      const response = await fetch(apiUrl(API_ENDPOINTS.ratingScales));
+      const response = await fetch(apiUrl('/api/mm/rating-scales'));
       
       if (!response.ok) {
         console.error('Failed to fetch rating scales:', response.status);
@@ -38,6 +35,27 @@ const RatingScales = ({ onNavigate }) => {
       setRatingScales([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch(apiUrl('/api/mm/refresh-rating-scales'), {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        await fetchRatingScales();
+        alert('✅ Rating Scales refreshed successfully!');
+      } else {
+        alert('❌ Failed to refresh rating scales');
+      }
+    } catch (error) {
+      console.error('Error refreshing rating scales:', error);
+      alert('❌ Error refreshing rating scales');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -72,20 +90,69 @@ const RatingScales = ({ onNavigate }) => {
     }));
   };
 
+  const getLevelBadgeColor = (level) => {
+    const colors = {
+      1: 'bg-red-100 text-red-700 border-red-200',
+      2: 'bg-orange-100 text-orange-700 border-orange-200',
+      3: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      4: 'bg-blue-100 text-blue-700 border-blue-200',
+      5: 'bg-green-100 text-green-700 border-green-200'
+    };
+    return colors[level] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getDimensionColor = (index) => {
+    const colors = [
+      'from-red-500 to-red-600',
+      'from-orange-500 to-orange-600',
+      'from-amber-500 to-amber-600',
+      'from-yellow-500 to-yellow-600',
+      'from-lime-500 to-lime-600',
+      'from-green-500 to-green-600',
+      'from-emerald-500 to-emerald-600',
+      'from-teal-500 to-teal-600',
+      'from-cyan-500 to-cyan-600',
+      'from-sky-500 to-sky-600',
+      'from-blue-500 to-blue-600',
+      'from-indigo-500 to-indigo-600',
+      'from-violet-500 to-violet-600',
+      'from-purple-500 to-purple-600',
+      'from-fuchsia-500 to-fuchsia-600',
+      'from-pink-500 to-pink-600',
+      'from-rose-500 to-rose-600'
+    ];
+    return colors[index % colors.length];
+  };
+
   if (loading) {
-    return <LoadingSpinner message="Loading Rating Scales..." />;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader className="animate-spin text-red-600" size={48} />
+        <span className="ml-3 text-lg font-semibold text-slate-600">Loading Rating Scales...</span>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-600 uppercase italic tracking-tight">
-          Rating Scales & Maturity Levels
-        </h1>
-        <p className="text-red-600 mt-1 font-bold text-sm uppercase tracking-wider">
-          {dimensionNames.length} Dimensions with Level 1-5 Maturity Definitions
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-600 uppercase italic tracking-tight">
+            Rating Scales & Maturity Levels
+          </h1>
+          <p className="text-red-600 mt-1 font-bold text-sm uppercase tracking-wider">
+            {dimensionNames.length} Dimensions with Level 1-5 Maturity Definitions
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold text-sm uppercase tracking-wide shadow-lg hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? 'Refreshing...' : 'Refresh Data'}
+        </button>
       </div>
 
       {/* Info Card */}
@@ -107,7 +174,7 @@ const RatingScales = ({ onNavigate }) => {
         {dimensionNames.length === 0 ? (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
             <p className="text-yellow-700 font-semibold">
-              No rating scales data available. Please contact the administrator.
+              No rating scales data available. Click "Refresh Data" to load from the Excel file.
             </p>
           </div>
         ) : (
@@ -190,14 +257,6 @@ const RatingScales = ({ onNavigate }) => {
           </div>
         </div>
       )}
-
-      <NavigationButtons
-        onNavigate={onNavigate}
-        previousIndex={1}
-        nextIndex={3}
-        previousLabel="Dashboard"
-        nextLabel="Matrices"
-      />
     </div>
   );
 };
