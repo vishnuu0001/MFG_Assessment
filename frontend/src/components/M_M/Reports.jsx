@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, TrendingUp, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, RefreshCw, Calculator, X } from 'lucide-react';
 import { apiUrl } from '../../config';
 
+// Reports Component - v2.0 - Cleaned and optimized
 const Reports = () => {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
