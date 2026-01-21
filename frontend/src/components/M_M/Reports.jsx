@@ -26,12 +26,14 @@ const Reports = ({ onNavigate }) => {
   useEffect(() => {
     fetchData();
     fetchDimensions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedDimension) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDimension]);
 
   const fetchDimensions = async () => {
