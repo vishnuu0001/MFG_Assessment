@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, TrendingUp, Target, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, RefreshCw, Calculator, X } from 'lucide-react';
+import { Download, TrendingUp, CheckCircle2, AlertCircle, ChevronDown, ChevronRight, RefreshCw, Calculator, X } from 'lucide-react';
 import { apiUrl } from '../../config';
 
 const Reports = () => {
@@ -104,35 +104,6 @@ const Reports = () => {
     }));
   };
 
-  const generateReport = async () => {
-    try {
-      // Generate PDF report
-      const response = await fetch(apiUrl('/api/mm/generate-report'), {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-      
-      // Download the HTML report
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Mahindra_Maturity_Assessment_${new Date().toISOString().split('T')[0]}.html`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      alert('✅ Report generated and downloaded successfully!');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      alert('❌ Error generating report. Please check the console.');
-    }
-  };
-
   const downloadCSV = () => {
     try {
       // Prepare CSV data
@@ -182,54 +153,6 @@ const Reports = () => {
     } catch (error) {
       console.error('Error downloading CSV:', error);
       alert('❌ Error downloading CSV. Please check the console.');
-    }
-  };
-
-  const viewRoadmap = () => {
-    try {
-      // Prepare roadmap data
-      const roadmapItems = [];
-      
-      areas.forEach(area => {
-        if (area.dimensions && area.dimensions.length > 0) {
-          area.dimensions.forEach(dim => {
-            const gap = dim.desired_level - dim.current_level;
-            if (gap > 0) {
-              roadmapItems.push({
-                area: area.name,
-                dimension: dim.name,
-                currentLevel: dim.current_level,
-                targetLevel: dim.desired_level,
-                gap: gap,
-                priority: gap > 2 ? 'High' : gap > 0 ? 'Medium' : 'Low',
-                effort: gap * 2, // Estimate: 2 months per level
-                impact: dim.desired_level * 20 // Score based on target level
-              });
-            }
-          });
-        }
-      });
-      
-      // Sort by priority (High > Medium > Low) and gap (largest first)
-      roadmapItems.sort((a, b) => {
-        const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        }
-        return b.gap - a.gap;
-      });
-      
-      // Set roadmap data and show modal
-      setRoadmapData({
-        items: roadmapItems,
-        areasCount: areas.length,
-        highPriorityCount: roadmapItems.filter(i => i.priority === 'High').length,
-        totalEffort: roadmapItems.reduce((sum, i) => sum + i.effort, 0)
-      });
-      setShowRoadmapModal(true);
-    } catch (error) {
-      console.error('Error generating roadmap:', error);
-      alert('❌ Error generating roadmap. Please check the console.');
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Upload, FileJson, FileSpreadsheet, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { Save, FileJson, FileSpreadsheet, ChevronDown, ChevronRight } from 'lucide-react';
 import { apiUrl } from '../../config';
 
 const SmartFactoryAssessment = () => {
