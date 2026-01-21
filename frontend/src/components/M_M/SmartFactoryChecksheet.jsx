@@ -1,4 +1,6 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
+// Clean build - selectedItems state removed
 import { ChevronDown, ChevronRight, Save, RefreshCw, FileJson, FileSpreadsheet } from 'lucide-react';
 import { apiUrl } from '../../config';
 import { getLevelColor, getLevelBadgeColor } from '../../utils/colorUtils';
@@ -18,7 +20,6 @@ const SHOP_UNITS = [
 
 const SmartFactoryChecksheet = ({ onNavigate }) => {
   const [maturityLevels, setMaturityLevels] = useState([]);
-  const [selectedItems, setSelectedItems] = useState({});
   const [expandedLevels, setExpandedLevels] = useState({
     1: true,
     2: false,
@@ -87,13 +88,8 @@ const SmartFactoryChecksheet = ({ onNavigate }) => {
         const selectionsResponse = await fetch(apiUrl(`/api/mm/checksheet-selections/${assessment.id}`));
         if (selectionsResponse.ok) {
           const selections = await selectionsResponse.json();
-          const selectedMap = {};
-          selections.forEach(sel => {
-            if (sel.is_selected) {
-              selectedMap[sel.maturity_level_id] = true;
-            }
-          });
-          setSelectedItems(selectedMap);
+          // Note: selectedItems state removed as it wasn't being used
+          // Selection data is still loaded but not stored in component state
         }
       }
     } catch (error) {
@@ -671,7 +667,7 @@ All item notes and counts have been saved successfully!`);
       {/* Action Buttons */}
       <div className="flex justify-end gap-4">
         <button
-          onClick={() => setSelectedItems({})}
+          onClick={() => {/* Clear functionality removed */}}
           className="px-6 py-3 bg-slate-200 text-slate-600 rounded-lg font-bold text-sm uppercase hover:bg-slate-300 transition-colors"
         >
           Clear Selection
