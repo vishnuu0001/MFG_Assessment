@@ -11,6 +11,9 @@ const Reports = ({ onNavigate }) => {
   const [selectedItems, setSelectedItems] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dimensions, setDimensions] = useState([]);
+  const [selectedDimension, setSelectedDimension] = useState('');
+  const [assessments, setAssessments] = useState([]);
   const [expandedLevels, setExpandedLevels] = useState({
     1: true,
     2: false,
@@ -22,14 +25,37 @@ const Reports = ({ onNavigate }) => {
 
   useEffect(() => {
     fetchData();
+    fetchDimensions();
   }, []);
+
+  useEffect(() => {
+    if (selectedDimension) {
+      fetchData();
+    }
+  }, [selectedDimension]);
+
+  const fetchDimensions = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/mm/dimensions'));
+      if (response.ok) {
+        const data = await response.json();
+        setDimensions(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Error fetching dimensions:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Fetch maturity levels
-      const mlResponse = await fetch(apiUrl(API_ENDPOINTS.maturityLevels));
+      // Fetch maturity levels with dimension filter
+      const mlUrl = selectedDimension 
+        ? apiUrl(`${API_ENDPOINTS.maturityLevels}?dimension_id=${selectedDimension}`)
+        : apiUrl(API_ENDPOINTS.maturityLevels);
+      
+      const mlResponse = await fetch(mlUrl);
       if (mlResponse.ok) {
         const mlData = await mlResponse.json();
         setMaturityLevels(Array.isArray(mlData) ? mlData : []);
@@ -48,6 +74,13 @@ const Reports = ({ onNavigate }) => {
           });
           setSelectedItems(selectedMap);
         }
+      }
+
+      // Fetch assessments for filtering
+      const assessResponse = await fetch(apiUrl('/api/mm/assessments'));
+      if (assessResponse.ok) {
+        const assessData = await assessResponse.json();
+        setAssessments(Array.isArray(assessData) ? assessData : []);
       }
       
     } catch (error) {
@@ -190,6 +223,55 @@ const Reports = ({ onNavigate }) => {
           {refreshing ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </div>
+
+      {/* Dimension Filter */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              Filter by Dimension/Area
+            </label>
+            <select
+              value={selectedDimension}
+              onChange={(e) => setSelectedDimension(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white"
+            >
+              <option value="">All Dimensions</option>
+              {dimensions.map(dim => (
+                <option key={dim.id} value={dim.id}>{dim.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div className="text-xs text-slate-500 mb-1">Selected Dimension</div>
+            <div className="text-lg font-bold text-slate-700">
+              {selectedDimension ? dimensions.find(d => d.id === parseInt(selectedDimension))?.name : 'All'}
+            </div>
+          </div>
+        </div>
+        {selectedDimension && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              📊 Showing assessment data for <strong>{dimensions.find(d => d.id === parseInt(selectedDimension))?.name}</strong>.
+              {assessments.filter(a => a.dimension_id === parseInt(selectedDimension)).length === 0 && 
+                <span className="ml-1 font-semibold text-orange-600">No assessment data captured yet (NA).</span>
+              }
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* No Data Message */}
+      {selectedDimension && assessments.filter(a => a.dimension_id === parseInt(selectedDimension)).length === 0 && (
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-8 text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h3 className="text-xl font-bold text-orange-700 mb-2">No Assessment Data Available</h3>
+          <p className="text-orange-600">
+            No assessment data has been captured for the selected dimension yet. 
+            Please conduct an assessment from the Smart Factory Assessment page.
+          </p>
+        </div>
+      )}
 
       {/* Maturity Levels */}
       <div className="space-y-4">

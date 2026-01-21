@@ -244,7 +244,7 @@ const LandingPage = ({ onGetStarted }) => {
         </footer>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0%, 100% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
