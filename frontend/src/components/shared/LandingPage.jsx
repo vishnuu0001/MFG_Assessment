@@ -40,15 +40,14 @@ const LandingPage = ({ onGetStarted }) => {
               </div>
               
               <h1 className="text-6xl md:text-7xl font-black text-slate-600 leading-tight">
-                Manufacturing Digital
+                Enterprise Digital Cockpit
                 <span className="block bg-gradient-to-r from-red-600 via-red-700 to-red-600 bg-clip-text text-transparent">
-                  Cockpit
+                  for Smart Factories
                 </span>
               </h1>
               
               <p className="text-2xl text-slate-500 leading-relaxed max-w-4xl mx-auto font-medium">
-                Transform your manufacturing operations with our comprehensive digital maturity assessment. 
-                Leverage data-driven insights to optimize processes, reduce costs, and accelerate your Industry 4.0 journey.
+                Unlock the full potential of your manufacturing enterprise with a structured digital maturity assessment enabling informed decisions, operational optimization, cost efficiency, and accelerated Industry 4.0 adoption.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
@@ -67,20 +66,16 @@ const LandingPage = ({ onGetStarted }) => {
               <div className="max-w-5xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-1 bg-gradient-to-r from-red-600 to-red-700 rounded-full"></div>
-                  <h2 className="text-4xl font-black text-slate-600">About Manufacturing Digital Cockpit</h2>
+                  <h2 className="text-4xl font-black text-slate-600">About the Enterprise Digital Cockpit for Smart Factories</h2>
                 </div>
                 
                 <div className="space-y-6 text-slate-500 leading-relaxed">
                   <p className="text-xl font-medium text-slate-600">
-                    The Manufacturing Digital Cockpit is an advanced digital platform designed to assess and enhance 
-                    the digital maturity of manufacturing operations. Built on industry-leading frameworks and best practices, 
-                    our platform provides actionable insights into your digitalization journey.
+                    The Enterprise Digital Cockpit for Smart Factories is a comprehensive digital platform designed to evaluate, monitor, and accelerate the digital maturity of manufacturing enterprises. Grounded in industry-leading frameworks and proven best practices, the platform delivers clear, actionable insights to guide and optimize your smart manufacturing transformation.
                   </p>
                   
                   <p className="text-lg">
-                    The assessment leverages extensive research to evaluate your company's digitalization progress across 
-                    manufacturing operations. It identifies opportunities for improvement, highlights areas where investments 
-                    have already succeeded, and compares your progress against top performers in the industry.
+                    Leveraging extensive research and benchmarking methodologies, the assessment evaluates digital maturity across end-to-end manufacturing operations. It identifies improvement opportunities, highlights areas where digital investments have delivered measurable value, and benchmarks performance against industry leaders enabling data-driven decision-making and sustained competitive advantage.
                   </p>
 
                   <div className="pt-6">
