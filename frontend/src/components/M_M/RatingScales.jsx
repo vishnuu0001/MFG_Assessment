@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Target } from 'lucide-react';
 import { apiUrl } from '../../config';
 import { getDimensionColor, getLevelBadgeColor } from '../../utils/colorUtils';
-import { API_ENDPOINTS, LEVEL_NAMES } from '../../utils/constants';
+import { API_ENDPOINTS } from '../../utils/constants';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import NavigationButtons from '../shared/NavigationButtons';
 

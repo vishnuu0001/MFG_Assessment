@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import NavigationButtons from '../shared/NavigationButtons';
-import { getCategoryColors } from '../../utils/colorUtils';
 
 const Matrices = ({ onNavigate }) => {
   const [expandedCategories, setExpandedCategories] = useState({

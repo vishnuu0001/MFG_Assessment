@@ -8,7 +8,6 @@ import NavigationButtons from '../shared/NavigationButtons';
 
 const Reports = ({ onNavigate }) => {
   const [maturityLevels, setMaturityLevels] = useState([]);
-  const [assessmentData, setAssessmentData] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

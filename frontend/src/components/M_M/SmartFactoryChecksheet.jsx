@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, Square, ChevronDown, ChevronRight, Save, RefreshCw, Upload, FileJson, FileSpreadsheet } from 'lucide-react';
+import { CheckSquare, Square, ChevronDown, ChevronRight, Save, RefreshCw, FileJson, FileSpreadsheet } from 'lucide-react';
 import { apiUrl } from '../../config';
 import { getLevelColor, getLevelBadgeColor } from '../../utils/colorUtils';
 import { API_ENDPOINTS } from '../../utils/constants';
-import LoadingSpinner from '../shared/LoadingSpinner';
 import NavigationButtons from '../shared/NavigationButtons';
 
 const SmartFactoryChecksheet = ({ onNavigate }) => {
