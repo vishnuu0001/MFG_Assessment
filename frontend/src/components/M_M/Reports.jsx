@@ -292,10 +292,15 @@ const Reports = ({ onNavigate }) => {
   const selectionState = Object.keys(selectedItems).length
     ? selectedItems
     : buildAutoSelection(maturityLevels, latestAssessment?.checked_count || 0);
-  const totalCapabilities = latestAssessment?.overall_count || 0;
-  const completedCount = latestAssessment?.checked_count || 0;
-  const overallPercentage = totalCapabilities > 0
-    ? Math.round((completedCount / totalCapabilities) * 100)
+
+  // Weighted totals: prefer per-level total * number of levels; fall back to raw total if it's already aggregate
+  const totalPerLevel = Number(latestAssessment?.overall_count) || 0;
+  const aggregateTotal = totalPerLevel * levelKeys.length;
+  const weightedTotal = aggregateTotal > 0 ? aggregateTotal : totalPerLevel;
+  const rawCompleted = Number(latestAssessment?.checked_count) || 0;
+  const completedCount = weightedTotal > 0 ? Math.min(rawCompleted, weightedTotal) : 0;
+  const overallPercentage = weightedTotal > 0
+    ? Math.round((completedCount / weightedTotal) * 100)
     : 0;
 
   if (loading) {
@@ -403,7 +408,7 @@ const Reports = ({ onNavigate }) => {
               <p className="text-slate-300 text-xs uppercase tracking-wider">Completed</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-black">{totalCapabilities}</p>
+              <p className="text-3xl font-black">{weightedTotal}</p>
               <p className="text-slate-300 text-xs uppercase tracking-wider">Total Capabilities</p>
             </div>
           </div>
