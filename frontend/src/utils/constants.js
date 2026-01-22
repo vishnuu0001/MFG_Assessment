@@ -66,7 +66,8 @@ export const TAB_NAMES = [
   'Smart Factory Assessment',
   'Dashboard',
   'Rating Scales',
-  'Matrices'
+  'Matrices',
+  'Road Map'
 ];
 
 // Level names mapping

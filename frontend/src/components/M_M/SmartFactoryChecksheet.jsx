@@ -325,20 +325,24 @@ const SmartFactoryChecksheet = ({ onNavigate }) => {
     const totals = Object.values(itemTotalCounts).map(val => parseInt(val, 10) || 0);
     const totalSum = totals.length ? totals[0] : 0;
 
+    // Use number of maturity levels to weight the denominator across all levels
+    const levelCount = Object.keys(groupedLevels).length || 5;
+    const weightedTotal = totalSum * levelCount;
+
     let checkedSum = 0;
     Object.values(itemCheckedCounts).forEach(val => {
       checkedSum += parseInt(val, 10) || 0;
     });
 
-    if (totalSum > 0 && checkedSum > totalSum) {
-      checkedSum = totalSum;
+    if (weightedTotal > 0 && checkedSum > weightedTotal) {
+      checkedSum = weightedTotal;
     }
 
-    const maturity = totalSum > 0 ? Math.round((checkedSum / totalSum) * 100) : 0;
+    const maturity = weightedTotal > 0 ? Math.round((checkedSum / weightedTotal) * 100) : 0;
     return { totalSum, checkedSum, maturity };
   };
 
-  const { totalSum, checkedSum } = calculateOverallMaturity();
+  const { totalSum, checkedSum, maturity } = calculateOverallMaturity();
 
   const handleSave = async () => {
     if (!assessmentId) {
@@ -544,13 +548,18 @@ All item notes and counts have been saved successfully!`);
           <p className="text-slate-500 text-sm">Applies across all levels</p>
         </div>
         <div className="flex gap-4 flex-wrap">
-          <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl min-w-[170px]">
             <div className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Count Entered</div>
             <div className="text-2xl font-black text-blue-800">{totalSum}</div>
           </div>
-          <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl min-w-[170px]">
             <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Checked Count Entered</div>
             <div className="text-2xl font-black text-emerald-800">{checkedSum}</div>
+          </div>
+          <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl min-w-[190px]">
+            <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">% Maturity Assessment</div>
+            <div className="text-2xl font-black text-amber-800">{maturity}%</div>
+            <p className="text-xs text-amber-700 mt-1 font-semibold">% of Assessed Maturity</p>
           </div>
         </div>
       </div>

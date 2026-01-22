@@ -6,6 +6,7 @@ import Reports from './components/M_M/Reports';
 import SmartFactoryAssessment from './components/M_M/SmartFactoryAssessment';
 import RatingScales from './components/M_M/RatingScales';
 import Matrices from './components/M_M/Matrices';
+import RoadMap from './components/M_M/RoadMap';
 import ApiDiagnostics from './components/ApiDiagnostics';
 import { TAB_NAMES } from './utils/constants';
 
@@ -101,6 +102,7 @@ const App = () => {
           {activeTab === TAB_NAMES[1] && <Reports onNavigate={handleNavigate} />}
           {activeTab === TAB_NAMES[2] && <RatingScales onNavigate={handleNavigate} />}
           {activeTab === TAB_NAMES[3] && <Matrices onNavigate={handleNavigate} />}
+          {activeTab === TAB_NAMES[4] && <RoadMap onNavigate={handleNavigate} />}
         </div>
       </main>
     </div>

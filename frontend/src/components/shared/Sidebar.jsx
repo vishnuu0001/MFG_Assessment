@@ -1,11 +1,12 @@
 import React from 'react';
-import { Home, Factory, Star, Grid } from 'lucide-react';
+import { Home, Factory, Star, Grid, MapPin } from 'lucide-react';
 
 const MENU_ITEMS = [
   { id: 'Dashboard', label: 'Dashboard', icon: Home },
   { id: 'Smart Factory', label: 'Smart Factory Assessment', icon: Factory },
   { id: 'Rating Scales', label: 'Rating Scales', icon: Star },
   { id: 'Matrices', label: 'Matrices', icon: Grid },
+  { id: 'Road Map', label: 'Road Map', icon: MapPin },
 ];
 
 const Sidebar = ({ active, setActive, onBackToDashboard }) => (

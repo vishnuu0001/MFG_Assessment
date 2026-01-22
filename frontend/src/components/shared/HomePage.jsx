@@ -1,5 +1,5 @@
 import React from 'react';
-import { Factory, BarChart3, Star, Grid } from 'lucide-react';
+import { Factory, BarChart3, Star, Grid, MapPin } from 'lucide-react';
 
 const HomePage = ({ onNavigate }) => {
   const cards = [
@@ -42,6 +42,16 @@ const HomePage = ({ onNavigate }) => {
       bgGradient: 'from-slate-50 to-slate-100',
       borderColor: 'border-slate-200',
       hoverShadow: 'hover:shadow-slate-200/50'
+    },
+    {
+      id: 'Road Map',
+      title: 'Road Map',
+      description: 'Plan your digital transformation journey with strategic milestones and implementation roadmap',
+      icon: MapPin,
+      color: 'from-emerald-600 to-emerald-700',
+      bgGradient: 'from-emerald-50 to-emerald-100',
+      borderColor: 'border-emerald-200',
+      hoverShadow: 'hover:shadow-emerald-200/50'
     }
   ];
 
